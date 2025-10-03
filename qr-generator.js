@@ -8,8 +8,8 @@ router.get('/qr', async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-    // Legacy format: endpoint|deviceName (pipe-separated)
-    const registrationData = `${baseUrl}/fhrnavigator|Demo App`;
+    // Standard format: endpoint|deviceName (pipe-separated)
+    const registrationData = `${baseUrl}|Demo App`;
 
     const qrDataUrl = await QRCode.toDataURL(registrationData, {
       errorCorrectionLevel: 'M',
@@ -138,8 +138,8 @@ router.get('/qr/download', async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-    // Legacy format: endpoint|deviceName (pipe-separated)
-    const registrationData = `${baseUrl}/fhrnavigator|Demo App`;
+    // Standard format: endpoint|deviceName (pipe-separated)
+    const registrationData = `${baseUrl}|Demo App`;
 
     const qrBuffer = await QRCode.toBuffer(registrationData, {
       errorCorrectionLevel: 'M',
