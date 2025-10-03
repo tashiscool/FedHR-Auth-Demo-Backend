@@ -39,7 +39,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Device registration endpoint
+// Device registration endpoint (new API - for JSON QR codes)
 app.post('/api/register', (req, res) => {
   try {
     const { deviceId, userId, accountId, appName, publicKey, deviceInfo } = req.body;
@@ -78,7 +78,46 @@ app.post('/api/register', (req, res) => {
   }
 });
 
-// Polling endpoint - returns pending auth requests for a device
+// Device registration endpoint (legacy API - for pipe-separated QR codes)
+app.post('/fhrnavigator/device/register', (req, res) => {
+  try {
+    const { deviceId, deviceName, publicKey } = req.body;
+
+    if (!deviceId || !deviceName) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['deviceId', 'deviceName']
+      });
+    }
+
+    // Store device registration
+    devices.set(deviceId, {
+      userId: 'legacy-user',
+      accountId: 'legacy-account',
+      appName: deviceName,
+      publicKey,
+      deviceInfo: null,
+      registeredAt: new Date().toISOString()
+    });
+
+    console.log(`✓ Device registered (legacy): ${deviceId} (${deviceName})`);
+
+    res.json({
+      success: true,
+      message: 'Device registered successfully',
+      deviceId,
+      registeredAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      error: 'Registration failed',
+      message: error.message
+    });
+  }
+});
+
+// Polling endpoint (new API) - returns pending auth requests for a device
 app.get('/api/poll/:deviceId', (req, res) => {
   try {
     const { deviceId } = req.params;
@@ -157,7 +196,87 @@ app.get('/api/poll/:deviceId', (req, res) => {
   }
 });
 
-// Auth response endpoint (approve/deny)
+// Polling endpoint (legacy API) - POST version for mobile app
+app.post('/fhrnavigator/device/poll-auth-requests', (req, res) => {
+  try {
+    const { deviceId } = req.body;
+
+    if (!deviceId) {
+      return res.status(400).json({
+        error: 'Missing deviceId'
+      });
+    }
+
+    if (!devices.has(deviceId)) {
+      return res.status(404).json({
+        error: 'Device not registered',
+        deviceId
+      });
+    }
+
+    // Find pending auth requests for this device
+    let pendingRequest = null;
+    for (const [requestId, request] of authRequests.entries()) {
+      if (request.deviceId === deviceId && request.status === 'pending') {
+        pendingRequest = {
+          sessionId: requestId,
+          timestamp: request.timestamp,
+          details: `${request.action} request from ${request.appName}`
+        };
+        break; // Only return one request at a time
+      }
+    }
+
+    // Auto-generate a demo auth request every 30 seconds if none exist
+    if (!pendingRequest) {
+      const device = devices.get(deviceId);
+      const lastRequest = Array.from(authRequests.values())
+        .filter(r => r.deviceId === deviceId)
+        .sort((a, b) => b.timestamp - a.timestamp)[0];
+
+      const thirtySecondsAgo = Date.now() - 30000;
+
+      if (!lastRequest || lastRequest.timestamp < thirtySecondsAgo) {
+        // Create a new demo auth request
+        const requestId = `demo_${crypto.randomBytes(8).toString('hex')}`;
+        const newRequest = {
+          deviceId,
+          appName: device.appName,
+          action: Math.random() > 0.5 ? 'login' : 'approve_transaction',
+          metadata: {
+            ipAddress: '192.168.1.100',
+            userAgent: 'Mozilla/5.0 Demo Browser',
+            location: 'San Francisco, CA'
+          },
+          timestamp: Date.now(),
+          status: 'pending'
+        };
+
+        authRequests.set(requestId, newRequest);
+
+        pendingRequest = {
+          sessionId: requestId,
+          timestamp: newRequest.timestamp,
+          details: `${newRequest.action} request from ${newRequest.appName}`
+        };
+
+        console.log(`✓ Auto-generated auth request: ${requestId} for device ${deviceId}`);
+      }
+    }
+
+    res.json({
+      authRequest: pendingRequest
+    });
+  } catch (error) {
+    console.error('Polling error:', error);
+    res.status(500).json({
+      error: 'Polling failed',
+      message: error.message
+    });
+  }
+});
+
+// Auth response endpoint (new API - approve/deny)
 app.post('/api/respond', (req, res) => {
   try {
     const { requestId, deviceId, response, signature, timestamp } = req.body;
@@ -203,6 +322,63 @@ app.post('/api/respond', (req, res) => {
       success: true,
       message: `Request ${response} successfully`,
       requestId,
+      status: request.status
+    });
+  } catch (error) {
+    console.error('Response error:', error);
+    res.status(500).json({
+      error: 'Response failed',
+      message: error.message
+    });
+  }
+});
+
+// Auth response endpoint (legacy API) - for mobile app
+app.post('/fhrnavigator/device/auth-response', (req, res) => {
+  try {
+    const { sessionId, deviceId, action, signature, timestamp } = req.body;
+
+    if (!sessionId || !deviceId || !action) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['sessionId', 'deviceId', 'action']
+      });
+    }
+
+    if (!authRequests.has(sessionId)) {
+      return res.status(404).json({
+        error: 'Auth request not found',
+        sessionId
+      });
+    }
+
+    const request = authRequests.get(sessionId);
+
+    if (request.deviceId !== deviceId) {
+      return res.status(403).json({
+        error: 'Device mismatch',
+        message: 'This request belongs to a different device'
+      });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({
+        error: 'Request already processed',
+        status: request.status
+      });
+    }
+
+    // Update request status (convert APPROVE/DENY to approved/denied)
+    request.status = action === 'APPROVE' ? 'approved' : 'denied';
+    request.signature = signature;
+    request.respondedAt = timestamp || Date.now();
+
+    console.log(`✓ Auth request ${request.status}: ${sessionId}`);
+
+    res.json({
+      success: true,
+      message: `Request ${request.status} successfully`,
+      sessionId,
       status: request.status
     });
   } catch (error) {

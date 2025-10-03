@@ -8,16 +8,10 @@ router.get('/qr', async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-    const registrationData = {
-      action: 'register',
-      token: 'demo_token_' + Date.now(),
-      userId: 'demo_user',
-      accountId: 'demo_account',
-      endpoint: `${baseUrl}/api`,
-      appName: 'Demo App'
-    };
+    // Legacy format: endpoint|deviceName (pipe-separated)
+    const registrationData = `${baseUrl}/fhrnavigator|Demo App`;
 
-    const qrDataUrl = await QRCode.toDataURL(JSON.stringify(registrationData), {
+    const qrDataUrl = await QRCode.toDataURL(registrationData, {
       errorCorrectionLevel: 'M',
       type: 'image/png',
       width: 400,
@@ -112,8 +106,9 @@ router.get('/qr', async (req, res) => {
 
         <h3>📄 QR Code Data:</h3>
         <div class="json-data">
-          <pre>${JSON.stringify(registrationData, null, 2)}</pre>
+          <pre>${registrationData}</pre>
         </div>
+        <p><small>Format: <code>endpoint|deviceName</code></small></p>
 
         <div>
           <a href="/" class="button">← Back to Home</a>
@@ -143,16 +138,10 @@ router.get('/qr/download', async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-    const registrationData = {
-      action: 'register',
-      token: 'demo_token_' + Date.now(),
-      userId: 'demo_user',
-      accountId: 'demo_account',
-      endpoint: `${baseUrl}/api`,
-      appName: 'Demo App'
-    };
+    // Legacy format: endpoint|deviceName (pipe-separated)
+    const registrationData = `${baseUrl}/fhrnavigator|Demo App`;
 
-    const qrBuffer = await QRCode.toBuffer(JSON.stringify(registrationData), {
+    const qrBuffer = await QRCode.toBuffer(registrationData, {
       errorCorrectionLevel: 'M',
       type: 'png',
       width: 400,
