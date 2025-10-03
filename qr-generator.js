@@ -8,8 +8,12 @@ router.get('/qr', async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-    // Standard format: endpoint|deviceName (pipe-separated)
-    const registrationData = `${baseUrl}|Demo App`;
+    // Generate unique demo user/account IDs
+    const userId = 'demo-user-' + Date.now();
+    const accountId = 'demo-account-' + Date.now();
+
+    // Format: endpoint|appName|userId|accountId (pipe-separated)
+    const registrationData = `${baseUrl}|Demo App|${userId}|${accountId}`;
 
     const qrDataUrl = await QRCode.toDataURL(registrationData, {
       errorCorrectionLevel: 'M',
@@ -108,7 +112,7 @@ router.get('/qr', async (req, res) => {
         <div class="json-data">
           <pre>${registrationData}</pre>
         </div>
-        <p><small>Format: <code>endpoint|deviceName</code></small></p>
+        <p><small>Format: <code>endpoint|appName|userId|accountId</code></small></p>
 
         <div>
           <a href="/" class="button">← Back to Home</a>
@@ -138,8 +142,12 @@ router.get('/qr/download', async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-    // Standard format: endpoint|deviceName (pipe-separated)
-    const registrationData = `${baseUrl}|Demo App`;
+    // Generate unique demo user/account IDs
+    const userId = 'demo-user-' + Date.now();
+    const accountId = 'demo-account-' + Date.now();
+
+    // Format: endpoint|appName|userId|accountId (pipe-separated)
+    const registrationData = `${baseUrl}|Demo App|${userId}|${accountId}`;
 
     const qrBuffer = await QRCode.toBuffer(registrationData, {
       errorCorrectionLevel: 'M',
