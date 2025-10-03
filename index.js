@@ -151,44 +151,7 @@ app.get('/api/poll/:deviceId', (req, res) => {
       }
     }
 
-    // Auto-generate a demo auth request every 30 seconds if none exist
-    if (pendingRequests.length === 0) {
-      const device = devices.get(deviceId);
-      const lastRequest = Array.from(authRequests.values())
-        .filter(r => r.deviceId === deviceId)
-        .sort((a, b) => b.timestamp - a.timestamp)[0];
-
-      const thirtySecondsAgo = Date.now() - 30000;
-
-      if (!lastRequest || lastRequest.timestamp < thirtySecondsAgo) {
-        // Create a new demo auth request
-        const requestId = `demo_${crypto.randomBytes(8).toString('hex')}`;
-        const newRequest = {
-          deviceId,
-          appName: device.appName,
-          action: Math.random() > 0.5 ? 'login' : 'approve_transaction',
-          metadata: {
-            ipAddress: '192.168.1.100',
-            userAgent: 'Mozilla/5.0 Demo Browser',
-            location: 'San Francisco, CA'
-          },
-          timestamp: Date.now(),
-          status: 'pending'
-        };
-
-        authRequests.set(requestId, newRequest);
-
-        pendingRequests.push({
-          requestId,
-          appName: newRequest.appName,
-          action: newRequest.action,
-          metadata: newRequest.metadata,
-          timestamp: newRequest.timestamp
-        });
-
-        console.log(`✓ Auto-generated auth request: ${requestId} for device ${deviceId}`);
-      }
-    }
+    // Note: Auto-generation disabled. Use /test page to manually trigger auth requests.
 
     res.json({
       success: true,
