@@ -122,14 +122,8 @@ router.get('/test', (req, res) => {
             </div>
           </div>
           <div>
-            <button class="button" onclick="sendAuthRequest('${device.deviceId}', 'login')">
-              🔐 Send Login Request
-            </button>
-            <button class="button" onclick="sendAuthRequest('${device.deviceId}', 'approve_transaction')">
-              💰 Send Transaction Request
-            </button>
-            <button class="button" onclick="sendAuthRequest('${device.deviceId}', 'verify_identity')">
-              ✅ Send Verify Request
+            <button class="button" onclick="sendAuthRequest('${device.deviceId}')">
+              🔐 Send Auth Request
             </button>
           </div>
         </div>
@@ -142,18 +136,18 @@ router.get('/test', (req, res) => {
       </div>
 
       <script>
-        async function sendAuthRequest(deviceId, action) {
+        async function sendAuthRequest(deviceId) {
           try {
             const response = await fetch('/api/test/trigger', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ deviceId, action })
+              body: JSON.stringify({ deviceId, action: 'authenticate' })
             });
 
             const result = await response.json();
 
             if (result.success) {
-              alert(\`✅ Auth request sent!\\n\\nRequest ID: \${result.requestId}\\nAction: \${action}\\n\\nCheck your mobile app in ~5 seconds.\`);
+              alert(\`✅ Auth request sent!\\n\\nRequest ID: \${result.requestId}\\nDevice ID: \${deviceId}\\n\\nThe mobile app will receive this request within 5 seconds.\`);
             } else {
               alert(\`❌ Error: \${result.error}\`);
             }
