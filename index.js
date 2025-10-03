@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const qrRouter = require('./qr-generator');
+const testRouter = require('./test-page');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,12 +13,19 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// QR code routes
-app.use('/', qrRouter);
-
 // In-memory storage for demo purposes
 const devices = new Map(); // deviceId -> { userId, accountId, appName, publicKey, registeredAt }
 const authRequests = new Map(); // requestId -> { deviceId, appName, action, timestamp, status }
+
+// Make storage available to routes
+app.locals.devices = devices;
+app.locals.authRequests = authRequests;
+
+// QR code routes
+app.use('/', qrRouter);
+
+// Test page routes
+app.use('/', testRouter);
 
 // Cleanup old auth requests every 5 minutes
 setInterval(() => {
